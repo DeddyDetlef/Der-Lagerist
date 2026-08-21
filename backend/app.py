@@ -105,7 +105,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title='Der Lagerist', lifespan=lifespan)
 asgi_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
-app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
+class NoCacheStaticFiles(StaticFiles):
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+
+
+app.mount('/static', NoCacheStaticFiles(directory=STATIC_DIR), name='static')
 
 
 def host_file():
