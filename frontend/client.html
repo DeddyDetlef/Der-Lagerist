@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Der Lagerist — Client</title>
+  <link rel="stylesheet" href="../static/css/style.css">
+  <script src="../static/js/socket.io.min.js"></script>
+  <script src="../static/js/jsQR.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Der Lagerist — Client</h1>
+  </header>
+  <div class="container">
+    <div id="status" class="status hidden"></div>
+
+    <section class="card" id="login-card">
+      <h2>Session beitreten</h2>
+      <p>Scanne den QR-Code vom Host oder gib Token + Adresse manuell ein.</p>
+      <div class="form-group">
+        <label for="client-name">Dein Name</label>
+        <input type="text" id="client-name" placeholder="z.B. Max">
+      </div>
+      <div class="form-group">
+        <label for="host-address">Host-Adresse</label>
+        <input type="text" id="host-address" placeholder="https://192.168.1.10:8000">
+      </div>
+      <div class="form-group">
+        <label for="session-token">Session-Token</label>
+        <input type="text" id="session-token" placeholder="abc123">
+      </div>
+      <button id="btn-join">Beitreten</button>
+
+      <hr style="margin: 1.2rem 0; border: none; border-top: 1px solid var(--border);">
+
+      <div class="scan-fallback">
+        <label for="qr-file" style="font-size: 0.9rem; color: var(--text-muted);">QR-Code vom Host aus Foto scannen:</label>
+        <input type="file" id="qr-file" accept="image/*" capture="environment" style="margin-top: 0.4rem;">
+      </div>
+    </section>
+
+    <section class="card hidden" id="search-card">
+      <h2>Bestand suchen</h2>
+      <div class="form-group">
+        <input type="text" id="client-search" placeholder="Code, Name, Ort, Kategorie ...">
+      </div>
+      <div class="category-select">
+        <button type="button" class="category-btn active" data-category="">Alle</button>
+        <button type="button" class="category-btn" data-category="laptop">Laptop</button>
+        <button type="button" class="category-btn" data-category="netzteil">Netzteile</button>
+        <button type="button" class="category-btn" data-category="peripherie">Peripherie</button>
+        <button type="button" class="category-btn" data-category="sonstiges">Sonstiges</button>
+      </div>
+      <ul id="client-results" class="client-results"></ul>
+    </section>
+
+    <section class="card hidden" id="scanner-card">
+      <h2>Objekt scannen</h2>
+      <div class="row">
+        <button id="btn-start-camera" type="button">Kamera starten</button>
+        <button id="btn-scan-photo" type="button" class="secondary">Foto aufnehmen</button>
+      </div>
+      <p id="camera-hint" class="hidden" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.75rem;">
+        Die Kamera benötigt in manchen Browsern HTTPS. Falls sie nicht startet, nutze bitte „Foto aufnehmen“ oder „Code manuell eingeben“.
+      </p>
+      <video id="video-preview" autoplay playsinline muted class="hidden"></video>
+      <canvas id="scan-canvas"></canvas>
+      <div class="scan-fallback hidden" id="photo-fallback">
+        <label for="obj-qr-file">QR-Code aus Foto erkennen</label>
+        <input type="file" id="obj-qr-file" accept="image/*" capture="environment">
+      </div>
+      <div class="form-group" style="margin-top: 0.75rem;">
+        <input type="text" id="manual-code" placeholder="Code manuell eingeben">
+      </div>
+      <button id="btn-manual-scan">Suchen</button>
+      <div style="margin-top: 1rem;">
+        <button id="btn-logout" class="secondary" type="button">Session beenden</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="item-card">
+      <h2 id="item-title">Gefundenes Objekt</h2>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">Kategorie: <strong id="item-category-label">Sonstiges</strong></p>
+      <form id="item-form">
+        <input type="hidden" id="edit-code">
+        <div class="form-group">
+          <label for="item-name">Name</label>
+          <input type="text" id="item-name">
+        </div>
+        <div class="form-group" id="desc-field">
+          <label for="item-desc">Beschreibung</label>
+          <div class="desc-templates hidden" id="desc-templates">
+            <button type="button" class="desc-template" data-text="neubetankung">Neubetankung</button>
+            <button type="button" class="desc-template" data-text="erstbetankung">Erstbetankung</button>
+            <button type="button" class="desc-template" data-text="test">Test</button>
+            <button type="button" class="desc-template" data-text="firmware">Firmware</button>
+            <button type="button" class="desc-template" data-text="firmware_nb">Firmware+NB</button>
+          </div>
+          <textarea id="item-desc"></textarea>
+        </div>
+
+        <div id="laptop-fields" class="hidden">
+          <div class="form-group">
+            <label for="item-t14-gen">T14 Generation</label>
+            <select id="item-t14-gen">
+              <option value="">—</option>
+              <option value="gen1">Gen 1</option>
+              <option value="gen3">Gen 3</option>
+              <option value="gen5">Gen 5</option>
+              <option value="andere">Andere</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="item-owners">Besitzer (kommasepariert)</label>
+            <input type="text" id="item-owners" placeholder="Max, Anna, ...">
+          </div>
+          <div class="form-group">
+            <label for="item-notes">Sonstiges</label>
+            <textarea id="item-notes"></textarea>
+          </div>
+          <div class="form-group">
+            <label>RMAs</label>
+            <div id="rma-list" class="rma-list"></div>
+          </div>
+        </div>
+
+        <div id="generic-fields">
+          <div class="row">
+            <div class="form-group">
+              <label for="item-location">Lagerort</label>
+              <input type="text" id="item-location">
+            </div>
+            <div class="form-group">
+              <label for="item-quantity">Menge</label>
+              <input type="number" step="any" id="item-quantity">
+            </div>
+            <div class="form-group">
+              <label for="item-unit">Einheit</label>
+              <input type="text" id="item-unit">
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" id="btn-save">Änderung speichern</button>
+      </form>
+    </section>
+
+    <section class="card hidden" id="not-found-card">
+      <h2>Objekt nicht gefunden</h2>
+      <p>Code: <code id="not-found-code"></code></p>
+      <p>Der Host kann es anlegen.</p>
+      <button id="btn-new-scan">Neuer Scan</button>
+    </section>
+  </div>
+
+  <script src="../static/js/client.js"></script>
+</body>
+</html>

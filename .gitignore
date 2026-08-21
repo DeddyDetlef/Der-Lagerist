@@ -1,0 +1,18 @@
+# Daten und Zertifikate
+data/
+certs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Testdateien
+test-*.csv
+test-*.json
+test-*.pdf
+
+# PowerShell-Hilfsdateien
+migrate_*.py
+syntax-check.ps1

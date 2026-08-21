@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Der Lagerist — Host</title>
+  <link rel="stylesheet" href="../static/css/style.css">
+  <script src="../static/js/socket.io.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Der Lagerist — Host</h1>
+  </header>
+  <div class="container">
+    <div id="status" class="status hidden"></div>
+
+    <section class="card">
+      <h2>Session</h2>
+      <p>Host-URL: <a id="host-url" href="#"></a></p>
+      <p>Client-Anmelde-URL: <strong id="client-url"></strong></p>
+      <p>Token: <code id="session-token"></code></p>
+      <div class="qr-code" id="session-qr"></div>
+      <p class="qr-label" id="qr-label" style="text-align:center; font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Client-Session</p>
+      <a class="download-link hidden" id="ca-link" href="/api/ca" download="rootCA.crt" style="display:block; text-align:center; margin-top: 0.25rem; font-size: 0.85rem;">Root-CA manuell herunterladen</a>
+      <div class="row" style="flex-wrap: wrap; gap: 0.5rem;">
+        <button id="btn-regenerate">Neuen Token generieren</button>
+        <button id="btn-toggle-ca" class="secondary hidden">Root-CA QR</button>
+        <button class="secondary" id="btn-copy-url">URL kopieren</button>
+      </div>
+      <p class="hidden" id="ca-hint" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.6rem;">Für Handy-Browser: QR scannen oder Root-CA installieren, dann ist HTTPS vertrauenswürdig.</p>
+    </section>
+
+    <section class="card">
+      <h2>Verbundene Clients</h2>
+      <ul id="client-list" class="client-list"></ul>
+    </section>
+
+    <section class="card">
+      <h2>Lagerbestand</h2>
+      <div class="form-group">
+        <label for="search-items">Suche</label>
+        <input type="text" id="search-items" placeholder="Code, Name, Ort, Kategorie ...">
+      </div>
+      <div class="row">
+        <button id="btn-refresh">Aktualisieren</button>
+        <button class="secondary" id="btn-export-csv">CSV exportieren</button>
+        <button class="secondary" id="btn-import-csv">CSV importieren</button>
+        <input type="file" id="csv-file" accept=".csv" class="hidden">
+      </div>
+      <table id="items-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Kategorie</th>
+            <th>Ort</th>
+            <th>Menge</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Neues Objekt / Bearbeiten</h2>
+      <form id="item-form">
+        <input type="hidden" id="edit-code">
+        <div class="form-group">
+          <label for="item-code">Code</label>
+          <input type="text" id="item-code" placeholder="Wird automatisch erzeugt, wenn leer">
+        </div>
+        <div class="form-group">
+          <label for="item-name">Name</label>
+          <input type="text" id="item-name" required>
+        </div>
+        <div class="form-group">
+          <label>Kategorie</label>
+          <div class="category-select">
+            <button type="button" class="category-btn" data-category="laptop">Laptop</button>
+            <button type="button" class="category-btn" data-category="netzteil">Netzteil</button>
+            <button type="button" class="category-btn" data-category="peripherie">Peripherie</button>
+            <button type="button" class="category-btn active" data-category="sonstiges">Sonstiges</button>
+          </div>
+          <input type="hidden" id="item-category" value="sonstiges">
+        </div>
+
+        <div class="form-group" id="desc-field">
+          <label for="item-desc">Beschreibung</label>
+          <div class="desc-templates hidden" id="desc-templates">
+            <button type="button" class="desc-template" data-text="neubetankung">Neubetankung</button>
+            <button type="button" class="desc-template" data-text="erstbetankung">Erstbetankung</button>
+            <button type="button" class="desc-template" data-text="test">Test</button>
+            <button type="button" class="desc-template" data-text="firmware">Firmware</button>
+            <button type="button" class="desc-template" data-text="firmware_nb">Firmware+NB</button>
+          </div>
+          <textarea id="item-desc"></textarea>
+        </div>
+
+        <div id="laptop-fields" class="hidden">
+          <div class="form-group">
+            <label for="item-t14-gen">T14 Generation</label>
+            <select id="item-t14-gen">
+              <option value="">—</option>
+              <option value="gen1">Gen 1</option>
+              <option value="gen3">Gen 3</option>
+              <option value="gen5">Gen 5</option>
+              <option value="andere">Andere</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="item-owners">Besitzer (kommasepariert)</label>
+            <input type="text" id="item-owners" placeholder="Max, Anna, ...">
+          </div>
+          <div class="form-group">
+            <label for="item-notes">Sonstiges</label>
+            <textarea id="item-notes"></textarea>
+          </div>
+          <div class="form-group">
+            <label>RMAs</label>
+            <div id="rma-list" class="rma-list"></div>
+            <div class="row">
+              <button type="button" class="secondary" id="btn-add-rma">RMA hinzufügen</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="generic-fields">
+          <div class="row">
+            <div class="form-group">
+              <label for="item-location">Lagerort</label>
+              <input type="text" id="item-location">
+            </div>
+            <div class="form-group">
+              <label for="item-quantity">Menge</label>
+              <input type="number" step="any" id="item-quantity" value="0">
+            </div>
+            <div class="form-group">
+              <label for="item-unit">Einheit</label>
+              <input type="text" id="item-unit" placeholder="Stk, kg, m ...">
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <button type="submit" id="btn-save">Speichern</button>
+          <button type="button" class="secondary" id="btn-cancel">Zurücksetzen</button>
+        </div>
+        <div class="qr-code hidden" id="item-qr"></div>
+        <div class="actions hidden" id="item-qr-actions">
+          <button id="btn-download-qr">QR-Code herunterladen</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Scan-Verlauf</h2>
+      <ul id="scan-log" class="scan-log"></ul>
+    </section>
+  </div>
+
+  <script src="../static/js/host.js"></script>
+</body>
+</html>
