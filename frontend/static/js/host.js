@@ -136,11 +136,9 @@ function renderItems(items) {
   const tbody = $('items-table').querySelector('tbody');
   for (const item of items) {
     const tr = document.createElement('tr');
-    const rmaCount = item.rmas ? item.rmas.length : 0;
-    const rmaText = rmaCount > 0 ? `${rmaCount} RMA${rmaCount > 1 ? 's' : ''}` : '—';
     tr.innerHTML = `
-      <td>${escapeHtml(item.code)}</td>
       <td>${escapeHtml(item.name)}</td>
+      <td>${item.category === 'laptop' ? escapeHtml(item.sina_token || '—') : '—'}</td>
       <td>${escapeHtml(item.category || 'sonstiges')}</td>
       <td>${escapeHtml(item.location || '')}</td>
       <td>${item.category === 'laptop' ? escapeHtml(item.unit || '—') : `${item.quantity} ${escapeHtml(item.unit || '')}`}</td>

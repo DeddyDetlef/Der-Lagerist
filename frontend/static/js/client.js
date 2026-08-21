@@ -394,7 +394,8 @@ function showSuggestions(items) {
   list.classList.remove('hidden');
   for (const item of items) {
     const li = document.createElement('li');
-    li.textContent = `${item.name} (${item.code})`;
+    const st = item.category === 'laptop' && item.sina_token ? ` · ${item.sina_token}` : '';
+    li.textContent = `${item.name}${st}`;
     li.addEventListener('click', () => {
       $('client-search').value = item.name;
       list.classList.add('hidden');
@@ -448,7 +449,8 @@ function renderSearchResults(items) {
   list.innerHTML = '';
   for (const item of items) {
     const li = document.createElement('li');
-    li.innerHTML = `<strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.code)} · ${escapeHtml(item.category || 'sonstiges')} · ${escapeHtml(item.location || '')}</small>`;
+    const extra = item.category === 'laptop' && item.sina_token ? ` · Sina: ${escapeHtml(item.sina_token)}` : '';
+    li.innerHTML = `<strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.category || 'sonstiges')} · ${escapeHtml(item.location || '')}${extra}</small>`;
     li.addEventListener('click', () => {
       socket.emit('client:scan', { code: item.code });
     });

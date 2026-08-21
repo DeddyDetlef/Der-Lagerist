@@ -105,18 +105,16 @@ async def get_item_by_code(db: aiosqlite.Connection, code: str) -> Optional[Dict
 
 
 async def search_items(db: aiosqlite.Connection, search: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
-    if search:
-        pattern = f'%{search}%'
-        query = '''
-            SELECT * FROM items
-            WHERE code LIKE ? OR name LIKE ? OR location LIKE ? OR category LIKE ?
-            ORDER BY updated_at DESC
-            LIMIT ? OFFSET ?
-        '''
-        async with db.execute(query, (pattern, pattern, pattern, pattern, limit, skip)) as cursor:
-            rows = await cursor.fetchall()
-            return [dict(r) for r in rows]
-    async with db.execute('SELECT * FROM items ORDER BY updated_at DESC LIMIT ? OFFSET ?', (limit, skip)) as cursor:
+    pattern = f'%{search}%' if search else '%'
+    query = '''
+        SELECT items.*, laptop_details.sina_token
+        FROM items
+        LEFT JOIN laptop_details ON laptop_details.item_id = items.id
+        WHERE items.code LIKE ? OR items.name LIKE ? OR items.location LIKE ? OR items.category LIKE ?
+        ORDER BY items.updated_at DESC
+        LIMIT ? OFFSET ?
+    '''
+    async with db.execute(query, (pattern, pattern, pattern, pattern, limit, skip)) as cursor:
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
 
