@@ -1,6 +1,14 @@
 $env:Path = [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + [Environment]::GetEnvironmentVariable('Path', 'Machine')
 $port = if ($env:LAGER_PORT) { $env:LAGER_PORT } else { 8000 }
 
+# Check if port is already in use
+$inUse = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -ne 0 }
+if ($inUse) {
+    Write-Host "Fehler: Port $port ist bereits belegt. Server laeuft bereits." -ForegroundColor Red
+    Read-Host "Enter zum Beenden"
+    exit 1
+}
+
 $ip = '127.0.0.1'
 try {
     $socket = New-Object System.Net.Sockets.Socket([System.Net.Sockets.AddressFamily]::InterNetwork, [System.Net.Sockets.SocketType]::Dgram, [System.Net.Sockets.ProtocolType]::Udp)
