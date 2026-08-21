@@ -85,13 +85,31 @@ function initCategoryButtons() {
   });
 }
 
+const UNIT_OPTIONS = ['Stk', 'kg', 'm', 'Paar', 'Pack', 'Set'];
+const CONDITION_OPTIONS = ['Neu', 'gebraucht', 'kaputt', 'unbekannt'];
+
+function setUnitOptions(options) {
+  const sel = $('item-unit');
+  const current = sel.value;
+  sel.innerHTML = '';
+  for (const opt of options) {
+    const option = document.createElement('option');
+    option.value = opt;
+    option.textContent = opt;
+    sel.appendChild(option);
+  }
+  if (options.includes(current)) sel.value = current;
+}
+
 function toggleCategoryFields(category) {
   const isLaptop = category === 'laptop';
   $('laptop-fields').classList.toggle('hidden', !isLaptop);
   $('desc-templates').classList.toggle('hidden', !isLaptop);
+  $('rma-details').classList.toggle('hidden', !isLaptop);
   // For laptop: hide quantity, show unit as condition
   $('item-quantity').closest('.form-group').style.display = isLaptop ? 'none' : '';
   $('item-unit').previousElementSibling.textContent = isLaptop ? 'Zustand' : 'Einheit';
+  setUnitOptions(isLaptop ? CONDITION_OPTIONS : UNIT_OPTIONS);
 }
 
 async function loadItems(search = '', append = false, skip = 0) {
@@ -126,7 +144,7 @@ function renderItems(items) {
       <td>${escapeHtml(item.name)}</td>
       <td>${escapeHtml(item.category || 'sonstiges')}</td>
       <td>${escapeHtml(item.location || '')}</td>
-      <td>${item.category === 'laptop' ? rmaText : `${item.quantity} ${escapeHtml(item.unit || '')}`}</td>
+      <td>${item.category === 'laptop' ? escapeHtml(item.unit || '—') : `${item.quantity} ${escapeHtml(item.unit || '')}`}</td>
       <td class="actions">
         <button data-code="${escapeHtml(item.code)}" class="btn-edit">Bearbeiten</button>
         <button data-code="${escapeHtml(item.code)}" class="btn-qr secondary">QR</button>
@@ -305,9 +323,12 @@ async function addRma() {
     showStatus('Bitte zuerst ein Objekt auswählen', 'error');
     return;
   }
-  const date = prompt('RMA-Datum (z.B. 2025-01-15):');
-  if (!date) return;
-  const desc = prompt('RMA-Beschreibung (optional):') || '';
+  const date = $('rma-date').value;
+  const desc = $('rma-description').value;
+  if (!date) {
+    showStatus('Bitte RMA-Datum angeben', 'error');
+    return;
+  }
   try {
     const res = await fetch(`/api/items/${encodeURIComponent(currentItem.code)}`, {
       method: 'PUT',
@@ -316,6 +337,8 @@ async function addRma() {
     });
     if (res.ok) {
       showStatus('RMA hinzugefügt', 'success');
+      $('rma-date').value = '';
+      $('rma-description').value = '';
       editItem(currentItem.code);
     } else {
       showStatus('RMA konnte nicht gespeichert werden', 'error');

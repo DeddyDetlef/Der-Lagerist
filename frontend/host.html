@@ -123,13 +123,6 @@
             <label for="item-notes">Sonstiges</label>
             <textarea id="item-notes"></textarea>
           </div>
-          <div class="form-group">
-            <label>RMAs</label>
-            <div id="rma-list" class="rma-list"></div>
-            <div class="row">
-              <button type="button" class="secondary" id="btn-add-rma">RMA hinzufügen</button>
-            </div>
-          </div>
         </div>
 
         <div id="generic-fields">
@@ -144,10 +137,27 @@
             </div>
             <div class="form-group">
               <label for="item-unit">Einheit</label>
-              <input type="text" id="item-unit" placeholder="Stk, kg, m ...">
+              <select id="item-unit">
+                <option value="Stk">Stk</option>
+                <option value="kg">kg</option>
+                <option value="m">m</option>
+                <option value="Paar">Paar</option>
+              </select>
             </div>
           </div>
         </div>
+
+        <details id="rma-details" class="hidden">
+          <summary>RMAs</summary>
+          <div class="form-group">
+            <div id="rma-list" class="rma-list"></div>
+            <div class="row">
+              <input type="date" id="rma-date" style="flex:1;">
+              <input type="text" id="rma-description" placeholder="Beschreibung" style="flex:2;">
+              <button type="button" class="secondary" id="btn-add-rma">RMA hinzufügen</button>
+            </div>
+          </div>
+        </details>
 
         <div class="row">
           <button type="submit" id="btn-save">Speichern</button>

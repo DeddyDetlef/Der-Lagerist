@@ -250,6 +250,20 @@ function showItem(item) {
 
   const isLaptop = item.category === 'laptop';
   $('laptop-fields').classList.toggle('hidden', !isLaptop);
+  const UNIT_OPTIONS = ['Stk', 'kg', 'm', 'Paar', 'Pack', 'Set'];
+  const CONDITION_OPTIONS = ['Neu', 'gebraucht', 'kaputt', 'unbekannt'];
+  const sel = $('item-unit');
+  const current = sel.value;
+  const options = isLaptop ? CONDITION_OPTIONS : UNIT_OPTIONS;
+  sel.innerHTML = '';
+  for (const opt of options) {
+    const option = document.createElement('option');
+    option.value = opt;
+    option.textContent = opt;
+    sel.appendChild(option);
+  }
+  if (options.includes(current)) sel.value = current;
+
   $('desc-templates').classList.toggle('hidden', !isLaptop);
   $('item-quantity').closest('.form-group').style.display = isLaptop ? 'none' : '';
   const unitLabel = $('item-unit').previousElementSibling;
@@ -357,15 +371,66 @@ function initSearch() {
     });
   });
 
-  $('client-search').addEventListener('input', (e) => clientSearch(e.target.value));
+  $('client-search').addEventListener('input', (e) => clientSuggestions(e.target.value));
+  $('client-search').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      clientSearch($('client-search').value);
+    }
+  });
+}
+
+let suggestionIndex = -1;
+
+function showSuggestions(items) {
+  const list = $('client-suggestions');
+  list.innerHTML = '';
+  if (!items || items.length === 0) {
+    list.classList.add('hidden');
+    return;
+  }
+  list.classList.remove('hidden');
+  for (const item of items) {
+    const li = document.createElement('li');
+    li.textContent = `${item.name} (${item.code})`;
+    li.addEventListener('click', () => {
+      $('client-search').value = item.name;
+      list.classList.add('hidden');
+      socket.emit('client:scan', { code: item.code });
+    });
+    list.appendChild(li);
+  }
+  suggestionIndex = -1;
+}
+
+async function clientSuggestions(query) {
+  if (!query) {
+    $('client-suggestions').classList.add('hidden');
+    return;
+  }
+  const url = new URL(`${getHostOrigin()}/api/items`, window.location.origin);
+  url.searchParams.set('search', query);
+  url.searchParams.set('limit', '5');
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    let items = data.items || [];
+    if (searchCategory) {
+      items = items.filter(i => (i.category || 'sonstiges') === searchCategory);
+    }
+    showSuggestions(items);
+  } catch (e) {
+    // ignore
+  }
 }
 
 async function clientSearch(query) {
+  $('client-suggestions').classList.add('hidden');
   const url = new URL(`${getHostOrigin()}/api/items`, window.location.origin);
   if (query) url.searchParams.set('search', query);
   try {
     const res = await fetch(url);
-    let items = await res.json();
+    const data = await res.json();
+    let items = data.items || [];
     if (searchCategory) {
       items = items.filter(i => (i.category || 'sonstiges') === searchCategory);
     }

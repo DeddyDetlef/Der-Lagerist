@@ -42,8 +42,9 @@
 
     <section class="card hidden" id="search-card">
       <h2>Bestand suchen</h2>
-      <div class="form-group">
-        <input type="text" id="client-search" placeholder="Code, Name, Ort, Kategorie ...">
+      <div class="form-group" style="position: relative;">
+        <input type="text" id="client-search" placeholder="Code, Name, Ort, Kategorie ..." autocomplete="off">
+        <ul id="client-suggestions" class="suggestions hidden"></ul>
       </div>
       <div class="category-select">
         <button type="button" class="category-btn active" data-category="">Alle</button>
@@ -141,7 +142,12 @@
             </div>
             <div class="form-group">
               <label for="item-unit">Einheit</label>
-              <input type="text" id="item-unit">
+              <select id="item-unit">
+                <option value="Stk">Stk</option>
+                <option value="kg">kg</option>
+                <option value="m">m</option>
+                <option value="Paar">Paar</option>
+              </select>
             </div>
           </div>
         </div>
