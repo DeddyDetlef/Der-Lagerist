@@ -173,6 +173,7 @@ textarea {
 }
 
 .category-btn:hover {
+  background: var(--primary-soft);
   border-color: var(--primary);
   color: var(--primary);
 }

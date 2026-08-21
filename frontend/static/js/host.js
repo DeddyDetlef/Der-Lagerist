@@ -253,11 +253,11 @@ async function deleteItem(code) {
 function resetForm() {
   $('item-form').reset();
   $('edit-code').value = '';
-  $('item-category').value = 'sonstiges';
+  $('item-category').value = 'laptop';
   document.querySelectorAll('.category-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.category === 'sonstiges');
+    b.classList.toggle('active', b.dataset.category === 'laptop');
   });
-  toggleCategoryFields('sonstiges');
+  toggleCategoryFields('laptop');
   $('rma-list').innerHTML = '';
   $('item-sina-token').value = 'BBK-Prod1-';
   currentItem = null;
