@@ -25,7 +25,7 @@ async def _get_db():
         db.row_factory = aiosqlite.Row
         yield db
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.environ.get('LAGER_BASE_DIR', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
 STATIC_DIR = os.path.join(FRONTEND_DIR, 'static')
 
