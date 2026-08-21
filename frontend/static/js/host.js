@@ -185,12 +185,12 @@ async function editItem(code) {
       if (item.details) {
         $('item-t14-gen').value = item.details.t14_gen || '';
         $('item-owners').value = item.details.owners || '';
-        $('item-sina-token').value = item.details.sina_token || '';
+        $('item-sina-token').value = item.details.sina_token || 'BBK-Prod1-';
         $('item-notes').value = item.details.notes || '';
       } else {
         $('item-t14-gen').value = '';
         $('item-owners').value = '';
-        $('item-sina-token').value = '';
+        $('item-sina-token').value = 'BBK-Prod1-';
         $('item-notes').value = '';
       }
     } else {
