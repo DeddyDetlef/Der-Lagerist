@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse,
 from fastapi.staticfiles import StaticFiles
 
 from .csv_io import export_csv, import_csv
-from .database import DB_PATH, delete_item, get_db, get_item_by_code, init_db, search_items, upsert_item
+from .database import DB_PATH, count_items, delete_item, get_audit_log, get_db, get_item_by_code, init_db, search_items, upsert_item
 from .models import ItemCreate, ItemUpdate
 from .qr import generate_qr
 
@@ -52,7 +52,7 @@ PROTOCOL = 'https' if (os.path.isfile(os.path.join(BASE_DIR, 'certs', 'cert.pem'
 
 class SessionManager:
     TOKEN_FILE = os.path.join(BASE_DIR, 'data', 'session_token.json')
-    TOKEN_TTL_HOURS = 24
+    TOKEN_TTL_HOURS = 8
 
     def __init__(self) -> None:
         self.token = self._load_token()
@@ -153,8 +153,10 @@ async def regenerate_session():
 
 
 @app.get('/api/items')
-async def list_items(search: Optional[str] = Query(None), db=Depends(get_db)):
-    return await search_items(db, search)
+async def list_items(search: Optional[str] = Query(None), skip: int = Query(0), limit: int = Query(100), db=Depends(get_db)):
+    items = await search_items(db, search, skip, limit)
+    total = await count_items(db, search)
+    return {'items': items, 'total': total, 'skip': skip, 'limit': limit}
 
 
 @app.get('/api/items/{code}')
@@ -165,20 +167,34 @@ async def read_item(code: str, db=Depends(get_db)):
     return item
 
 
-async def _save_item_details(db, item_id: int, data: dict):
+async def _save_item_details(db, item_id: int, data: dict, changed_by: str = ''):
     from .database import upsert_laptop_details, add_rma
-    details = {k: v for k, v in data.items() if k in ('t14_gen', 'owners', 'notes')}
+    details = {k: v for k, v in data.items() if k in ('t14_gen', 'owners', 'notes', 'sina_token')}
     if details:
         await upsert_laptop_details(db, item_id, details)
     if data.get('rma_date'):
         await add_rma(db, item_id, data['rma_date'], data.get('rma_description', ''))
 
 
+CATEGORY_PREFIXES = {
+    'laptop': 'LAP-',
+    'netzteil': 'NTZ-',
+    'peripherie': 'PER-',
+    'sonstiges': 'LAG-',
+}
+
+
+def generate_code(category: str) -> str:
+    prefix = CATEGORY_PREFIXES.get(category, 'LAG-')
+    token = secrets.token_urlsafe(4).upper().replace('-', '').replace('_', '')
+    return f'{prefix}{token}'
+
+
 @app.post('/api/items')
 async def create_item(item: ItemCreate, db=Depends(get_db)):
-    code = item.code or secrets.token_urlsafe(6).upper()
     data = item.model_dump(exclude_unset=True, exclude={'code'})
-    result = await upsert_item(db, code, data)
+    code = item.code or generate_code(data.get('category', 'sonstiges'))
+    result = await upsert_item(db, code, data, 'Host')
     if result and result.get('category') == 'laptop':
         await _save_item_details(db, result['id'], data)
         result = await get_item_by_code(db, code)
@@ -189,7 +205,7 @@ async def create_item(item: ItemCreate, db=Depends(get_db)):
 @app.put('/api/items/{code}')
 async def update_item(code: str, item: ItemUpdate, db=Depends(get_db)):
     data = item.model_dump(exclude_unset=True)
-    result = await upsert_item(db, code, data)
+    result = await upsert_item(db, code, data, 'Host')
     if result and result.get('category') == 'laptop':
         await _save_item_details(db, result['id'], data)
         result = await get_item_by_code(db, code)
@@ -269,6 +285,11 @@ async def list_scans(db=Depends(get_db)):
     return await get_scans(db)
 
 
+@app.get('/api/audit')
+async def list_audit(item_code: Optional[str] = Query(None), db=Depends(get_db)):
+    return await get_audit_log(db, item_code)
+
+
 @sio.event
 async def connect(sid, environ):
     print(f'connect {sid}')
@@ -326,11 +347,12 @@ async def client_update(sid, data):
     code = data.get('code', '') if data else ''
     if not code:
         return
+    client_name = session_mgr.clients.get(sid, {}).get('name', 'Unbekannt') if sid in session_mgr.clients else 'Unbekannt'
     update_data = {k: v for k, v in data.items() if k != 'code'}
     async with _get_db() as db:
-        result = await upsert_item(db, code, update_data)
+        result = await upsert_item(db, code, update_data, client_name)
         if result and result.get('category') == 'laptop':
-            await _save_item_details(db, result['id'], update_data)
+            await _save_item_details(db, result['id'], update_data, client_name)
             result = await get_item_by_code(db, code)
     if result:
         await sio.emit('item:updated', result)
@@ -343,9 +365,9 @@ async def host_update(sid, data):
         return
     update_data = {k: v for k, v in data.items() if k != 'code'}
     async with _get_db() as db:
-        result = await upsert_item(db, code, update_data)
+        result = await upsert_item(db, code, update_data, 'Host')
         if result and result.get('category') == 'laptop':
-            await _save_item_details(db, result['id'], update_data)
+            await _save_item_details(db, result['id'], update_data, 'Host')
             result = await get_item_by_code(db, code)
     if result:
         await sio.emit('item:updated', result)

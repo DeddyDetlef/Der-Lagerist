@@ -2,6 +2,8 @@ const socket = io();
 let sessionUrl = '';
 let sessionToken = '';
 let currentItem = null;
+let currentSkip = 0;
+const PAGE_SIZE = 100;
 
 function $(id) { return document.getElementById(id); }
 
@@ -87,18 +89,27 @@ function toggleCategoryFields(category) {
   const isLaptop = category === 'laptop';
   $('laptop-fields').classList.toggle('hidden', !isLaptop);
   $('desc-templates').classList.toggle('hidden', !isLaptop);
-  // For laptop: hide quantity/unit
+  // For laptop: hide quantity, show unit as condition
   $('item-quantity').closest('.form-group').style.display = isLaptop ? 'none' : '';
-  $('item-unit').closest('.form-group').style.display = isLaptop ? 'none' : '';
+  $('item-unit').previousElementSibling.textContent = isLaptop ? 'Zustand' : 'Einheit';
 }
 
-async function loadItems(search = '') {
+async function loadItems(search = '', append = false, skip = 0) {
   const url = new URL('/api/items', window.location.origin);
   if (search) url.searchParams.set('search', search);
+  url.searchParams.set('skip', String(skip));
+  url.searchParams.set('limit', String(PAGE_SIZE));
   try {
     const res = await fetch(url);
-    const items = await res.json();
-    renderItems(items);
+    const data = await res.json();
+    if (!append) {
+      currentSkip = 0;
+      $('items-table').querySelector('tbody').innerHTML = '';
+    }
+    renderItems(data.items || []);
+    currentSkip = skip;
+    const hasMore = (data.total || 0) > currentSkip + (data.items || []).length;
+    $('btn-load-more').classList.toggle('hidden', !hasMore);
   } catch (e) {
     showStatus('Bestand konnte nicht geladen werden', 'error');
   }
@@ -106,8 +117,6 @@ async function loadItems(search = '') {
 
 function renderItems(items) {
   const tbody = $('items-table').querySelector('tbody');
-  tbody.innerHTML = '';
-  for (const item of items) {
     const tr = document.createElement('tr');
     const rmaCount = item.rmas ? item.rmas.length : 0;
     const rmaText = rmaCount > 0 ? `${rmaCount} RMA${rmaCount > 1 ? 's' : ''}` : '—';
@@ -160,10 +169,12 @@ async function editItem(code) {
       if (item.details) {
         $('item-t14-gen').value = item.details.t14_gen || '';
         $('item-owners').value = item.details.owners || '';
+        $('item-sina-token').value = item.details.sina_token || '';
         $('item-notes').value = item.details.notes || '';
       } else {
         $('item-t14-gen').value = '';
         $('item-owners').value = '';
+        $('item-sina-token').value = '';
         $('item-notes').value = '';
       }
     } else {
@@ -174,6 +185,7 @@ async function editItem(code) {
     }
 
     renderRmas(item.rmas || []);
+    await loadAudit(item.code);
     showItemQr(item.code);
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   } catch (e) {
@@ -255,6 +267,7 @@ async function saveItem(e) {
   if (category === 'laptop') {
     body.t14_gen = $('item-t14-gen').value;
     body.owners = $('item-owners').value;
+    body.sina_token = $('item-sina-token').value;
     body.notes = $('item-notes').value;
   }
 
@@ -355,6 +368,35 @@ function renderScans(scans) {
   }
 }
 
+async function loadAudit(code) {
+  try {
+    const res = await fetch(`/api/audit?item_code=${encodeURIComponent(code)}`);
+    const audits = await res.json();
+    renderAudit(audits);
+  } catch (e) {
+    console.warn('Audit-Log konnte nicht geladen werden', e);
+  }
+}
+
+function renderAudit(audits) {
+  const list = $('audit-log');
+  list.innerHTML = '';
+  const card = $('audit-card');
+  if (!audits || audits.length === 0) {
+    card.classList.add('hidden');
+    return;
+  }
+  card.classList.remove('hidden');
+  for (const entry of audits) {
+    const li = document.createElement('li');
+    const time = new Date(entry.changed_at).toLocaleString();
+    const changes = JSON.parse(entry.changes || '{}');
+    const changeSummary = Object.entries(changes).map(([k, v]) => `${k}: ${JSON.stringify(v.old)} → ${JSON.stringify(v.new)}`).join('; ');
+    li.textContent = `${time} — ${escapeHtml(entry.action)} von ${escapeHtml(entry.changed_by)} (${changeSummary})`;
+    list.appendChild(li);
+  }
+}
+
 async function exportCsv() {
   window.open('/api/csv/export');
 }
@@ -451,6 +493,7 @@ $('btn-copy-url').addEventListener('click', () => {
 
 $('btn-refresh').addEventListener('click', () => loadItems($('search-items').value));
 $('search-items').addEventListener('input', (e) => loadItems(e.target.value));
+$('btn-load-more').addEventListener('click', () => loadItems($('search-items').value, true, currentSkip + PAGE_SIZE));
 $('item-form').addEventListener('submit', saveItem);
 $('btn-cancel').addEventListener('click', resetForm);
 $('btn-export-csv').addEventListener('click', exportCsv);

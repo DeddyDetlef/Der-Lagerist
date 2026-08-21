@@ -1,3 +1,4 @@
+import json
 import os
 import aiosqlite
 from datetime import datetime, timezone
@@ -34,6 +35,7 @@ async def init_db() -> None:
                 t14_gen TEXT DEFAULT '',
                 owners TEXT DEFAULT '',
                 notes TEXT DEFAULT '',
+                sina_token TEXT DEFAULT '',
                 FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE
             )
         ''')
@@ -54,6 +56,16 @@ async def init_db() -> None:
                 session_token TEXT DEFAULT '',
                 found INTEGER DEFAULT 0,
                 scanned_at TEXT NOT NULL
+            )
+        ''')
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                item_code TEXT NOT NULL,
+                action TEXT NOT NULL,
+                changes TEXT DEFAULT '',
+                changed_by TEXT DEFAULT '',
+                changed_at TEXT NOT NULL
             )
         ''')
         await db.commit()
@@ -92,29 +104,47 @@ async def get_item_by_code(db: aiosqlite.Connection, code: str) -> Optional[Dict
         return item
 
 
-async def search_items(db: aiosqlite.Connection, search: Optional[str] = None) -> List[Dict[str, Any]]:
+async def search_items(db: aiosqlite.Connection, search: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
     if search:
         pattern = f'%{search}%'
         query = '''
             SELECT * FROM items
             WHERE code LIKE ? OR name LIKE ? OR location LIKE ? OR category LIKE ?
             ORDER BY updated_at DESC
+            LIMIT ? OFFSET ?
         '''
-        async with db.execute(query, (pattern, pattern, pattern, pattern)) as cursor:
+        async with db.execute(query, (pattern, pattern, pattern, pattern, limit, skip)) as cursor:
             rows = await cursor.fetchall()
             return [dict(r) for r in rows]
-    async with db.execute('SELECT * FROM items ORDER BY updated_at DESC') as cursor:
+    async with db.execute('SELECT * FROM items ORDER BY updated_at DESC LIMIT ? OFFSET ?', (limit, skip)) as cursor:
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
 
 
-async def upsert_item(db: aiosqlite.Connection, code: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+async def count_items(db: aiosqlite.Connection, search: Optional[str] = None) -> int:
+    if search:
+        pattern = f'%{search}%'
+        async with db.execute('SELECT COUNT(*) FROM items WHERE code LIKE ? OR name LIKE ? OR location LIKE ? OR category LIKE ?', (pattern, pattern, pattern, pattern)) as cursor:
+            row = await cursor.fetchone()
+            return row[0]
+    async with db.execute('SELECT COUNT(*) FROM items') as cursor:
+        row = await cursor.fetchone()
+        return row[0]
+
+
+async def upsert_item(db: aiosqlite.Connection, code: str, data: Dict[str, Any], changed_by: str = '') -> Optional[Dict[str, Any]]:
     existing = await get_item_by_code(db, code)
+    action = 'create' if not existing else 'update'
+    changes = {}
     if existing:
         fields = []
         values = []
         for key in ['name', 'category', 'description', 'location', 'quantity', 'unit']:
             if key in data:
+                old = existing.get(key, '')
+                new = data[key]
+                if old != new:
+                    changes[key] = {'old': old, 'new': new}
                 fields.append(f'{key} = ?')
                 values.append(data[key])
         if fields:
@@ -123,6 +153,8 @@ async def upsert_item(db: aiosqlite.Connection, code: str, data: Dict[str, Any])
             values.append(code)
             await db.execute(f'UPDATE items SET {", ".join(fields)} WHERE code = ?', values)
     else:
+        for key in ['name', 'category', 'description', 'location', 'quantity', 'unit']:
+            changes[key] = {'old': '', 'new': data.get(key, '')}
         await db.execute('''
             INSERT INTO items (code, name, category, description, location, quantity, unit, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -137,6 +169,8 @@ async def upsert_item(db: aiosqlite.Connection, code: str, data: Dict[str, Any])
             _now(),
         ))
     await db.commit()
+    if changes:
+        await add_audit_log(db, code, action, changes, changed_by)
     item = await get_item_by_code(db, code)
     return item
 
@@ -146,7 +180,7 @@ async def upsert_laptop_details(db: aiosqlite.Connection, item_id: int, data: Di
     if existing:
         fields = []
         values = []
-        for key in ['t14_gen', 'owners', 'notes']:
+        for key in ['t14_gen', 'owners', 'notes', 'sina_token']:
             if key in data:
                 fields.append(f'{key} = ?')
                 values.append(data[key])
@@ -155,13 +189,14 @@ async def upsert_laptop_details(db: aiosqlite.Connection, item_id: int, data: Di
             await db.execute(f'UPDATE laptop_details SET {", ".join(fields)} WHERE item_id = ?', values)
     else:
         await db.execute('''
-            INSERT INTO laptop_details (item_id, t14_gen, owners, notes)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO laptop_details (item_id, t14_gen, owners, notes, sina_token)
+            VALUES (?, ?, ?, ?, ?)
         ''', (
             item_id,
             data.get('t14_gen', ''),
             data.get('owners', ''),
             data.get('notes', ''),
+            data.get('sina_token', ''),
         ))
     await db.commit()
     return await _get_laptop_details(db, item_id)
@@ -184,6 +219,24 @@ async def add_scan(db: aiosqlite.Connection, code: str, client_name: str = '', s
 
 async def get_scans(db: aiosqlite.Connection, limit: int = 100) -> List[Dict[str, Any]]:
     async with db.execute('SELECT * FROM scans ORDER BY scanned_at DESC LIMIT ?', (limit,)) as cursor:
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+
+
+async def add_audit_log(db: aiosqlite.Connection, item_code: str, action: str, changes: Dict[str, Any], changed_by: str = '') -> None:
+    await db.execute(
+        'INSERT INTO audit_log (item_code, action, changes, changed_by, changed_at) VALUES (?, ?, ?, ?, ?)',
+        (item_code, action, json.dumps(changes), changed_by, _now())
+    )
+    await db.commit()
+
+
+async def get_audit_log(db: aiosqlite.Connection, item_code: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
+    if item_code:
+        async with db.execute('SELECT * FROM audit_log WHERE item_code = ? ORDER BY changed_at DESC LIMIT ?', (item_code, limit)) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
+    async with db.execute('SELECT * FROM audit_log ORDER BY changed_at DESC LIMIT ?', (limit,)) as cursor:
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
 

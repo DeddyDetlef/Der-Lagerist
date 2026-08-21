@@ -17,6 +17,17 @@ try {
 Set-Location $PSScriptRoot
 New-Item -ItemType Directory -Path 'certs' -Force | Out-Null
 
+# Daily database backup
+$dbPath = Join-Path (Join-Path $PSScriptRoot 'data') 'lager.db'
+$backupDir = Join-Path $PSScriptRoot 'backups'
+New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
+$backupFile = Join-Path $backupDir ("lager_{0}.zip" -f (Get-Date -Format 'yyyy-MM-dd'))
+if ((Test-Path $dbPath) -and -not (Test-Path $backupFile)) {
+    Write-Host "Erstelle taegliches Backup: $backupFile" -ForegroundColor Cyan
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::CreateFromDirectory((Get-Item $dbPath).DirectoryName, $backupFile, [System.IO.Compression.CompressionLevel]::Optimal, $false)
+}
+
 $certFile = Join-Path (Join-Path $PSScriptRoot 'certs') 'cert.pem'
 $keyFile = Join-Path (Join-Path $PSScriptRoot 'certs') 'key.pem'
 

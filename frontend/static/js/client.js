@@ -33,7 +33,7 @@ function loadSession() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    if (Date.now() - data.saved_at > 24 * 60 * 60 * 1000) {
+    if (Date.now() - data.saved_at > 8 * 60 * 60 * 1000) {
       clearSession();
       return null;
     }
@@ -252,23 +252,27 @@ function showItem(item) {
   $('laptop-fields').classList.toggle('hidden', !isLaptop);
   $('desc-templates').classList.toggle('hidden', !isLaptop);
   $('item-quantity').closest('.form-group').style.display = isLaptop ? 'none' : '';
-  $('item-unit').closest('.form-group').style.display = isLaptop ? 'none' : '';
+  const unitLabel = $('item-unit').previousElementSibling;
+  if (unitLabel) unitLabel.textContent = isLaptop ? 'Zustand' : 'Einheit';
 
   if (isLaptop) {
     $('item-desc').value = item.description || '';
     if (item.details) {
       $('item-t14-gen').value = item.details.t14_gen || '';
       $('item-owners').value = item.details.owners || '';
+      $('item-sina-token').value = item.details.sina_token || '';
       $('item-notes').value = item.details.notes || '';
     } else {
       $('item-t14-gen').value = '';
       $('item-owners').value = '';
+      $('item-sina-token').value = '';
       $('item-notes').value = '';
     }
   } else {
     $('item-desc').value = item.description || '';
     $('item-t14-gen').value = '';
     $('item-owners').value = '';
+    $('item-sina-token').value = '';
     $('item-notes').value = '';
   }
 
@@ -310,6 +314,7 @@ async function saveItem(e) {
   if (category === 'laptop') {
     body.t14_gen = $('item-t14-gen').value;
     body.owners = $('item-owners').value;
+    body.sina_token = $('item-sina-token').value;
     body.notes = $('item-notes').value;
   }
 

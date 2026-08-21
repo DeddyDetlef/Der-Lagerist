@@ -23,6 +23,7 @@ class ItemCreate(BaseModel):
     t14_gen: Optional[str] = None
     owners: Optional[str] = None
     notes: Optional[str] = None
+    sina_token: Optional[str] = None
     rma_date: Optional[str] = None
     rma_description: Optional[str] = None
 
@@ -37,6 +38,7 @@ class ItemUpdate(BaseModel):
     t14_gen: Optional[str] = None
     owners: Optional[str] = None
     notes: Optional[str] = None
+    sina_token: Optional[str] = None
     rma_date: Optional[str] = None
     rma_description: Optional[str] = None
 

@@ -60,6 +60,9 @@
         </thead>
         <tbody></tbody>
       </table>
+      <div class="row" style="justify-content: center; margin-top: 0.75rem;">
+        <button id="btn-load-more" class="secondary hidden">Weitere laden</button>
+      </div>
     </section>
 
     <section class="card">
@@ -113,6 +116,10 @@
             <input type="text" id="item-owners" placeholder="Max, Anna, ...">
           </div>
           <div class="form-group">
+            <label for="item-sina-token">Sina Token</label>
+            <input type="text" id="item-sina-token" placeholder="Zusatzgerät-Token">
+          </div>
+          <div class="form-group">
             <label for="item-notes">Sonstiges</label>
             <textarea id="item-notes"></textarea>
           </div>
@@ -151,6 +158,11 @@
           <button id="btn-download-qr">QR-Code herunterladen</button>
         </div>
       </form>
+    </section>
+
+    <section class="card hidden" id="audit-card">
+      <h2>Änderungsverlauf</h2>
+      <ul id="audit-log" class="scan-log"></ul>
     </section>
 
     <section class="card">
