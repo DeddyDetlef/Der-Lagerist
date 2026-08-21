@@ -40,6 +40,10 @@
         <label for="search-items">Suche</label>
         <input type="text" id="search-items" placeholder="Code, Name, Ort, Kategorie ...">
       </div>
+      <div id="stock-qr" class="qr-code hidden"></div>
+      <div class="row hidden" id="stock-qr-actions" style="margin-bottom: 0.75rem;">
+        <button id="btn-download-stock-qr" class="secondary">QR herunterladen</button>
+      </div>
       <div class="row">
         <button id="btn-refresh">Aktualisieren</button>
         <button class="secondary" id="btn-export-csv">CSV exportieren</button>
@@ -161,10 +165,6 @@
         <div class="row">
           <button type="submit" id="btn-save">Speichern</button>
           <button type="button" class="secondary" id="btn-cancel">Zurücksetzen</button>
-        </div>
-        <div class="qr-code hidden" id="item-qr"></div>
-        <div class="actions hidden" id="item-qr-actions">
-          <button id="btn-download-qr">QR-Code herunterladen</button>
         </div>
       </form>
     </section>

@@ -201,8 +201,7 @@ async function editItem(code) {
 
     renderRmas(item.rmas || []);
     await loadAudit(item.code);
-    showItemQr(item.code);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (e) {
     showStatus('Objekt konnte nicht geladen werden', 'error');
   }
@@ -221,12 +220,12 @@ function renderRmas(rmas) {
 function showItemQr(code) {
   const img = document.createElement('img');
   img.src = `/api/items/${encodeURIComponent(code)}/qr?box_size=12`;
-  const qr = $('item-qr');
+  const qr = $('stock-qr');
   qr.innerHTML = '';
   qr.appendChild(img);
   qr.classList.remove('hidden');
-  $('item-qr-actions').classList.remove('hidden');
-  $('btn-download-qr').onclick = () => {
+  $('stock-qr-actions').classList.remove('hidden');
+  $('btn-download-stock-qr').onclick = () => {
     const a = document.createElement('a');
     a.href = img.src;
     a.download = `qr-${code}.png`;
@@ -259,8 +258,6 @@ function resetForm() {
   });
   toggleCategoryFields('sonstiges');
   $('rma-list').innerHTML = '';
-  $('item-qr').classList.add('hidden');
-  $('item-qr-actions').classList.add('hidden');
   currentItem = null;
 }
 
