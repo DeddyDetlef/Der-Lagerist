@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse,
 from fastapi.staticfiles import StaticFiles
 
 from .csv_io import export_csv, import_csv
-from .database import DB_PATH, count_items, delete_item, get_audit_log, get_db, get_item_by_code, init_db, search_items, upsert_item
+from .database import DB_PATH, add_scan, count_items, delete_item, get_audit_log, get_db, get_item_by_code, get_scans, init_db, search_items, upsert_item
 from .models import ItemCreate, ItemUpdate
 from .qr import generate_qr
 
