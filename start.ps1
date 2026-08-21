@@ -84,6 +84,14 @@ Write-Host "  Host-URL: ${protocol}://${ip}:${port}/host" -ForegroundColor Yello
 Write-Host "  Client-URL: ${protocol}://${ip}:${port}/client" -ForegroundColor Yellow
 Write-Host "====================================================" -ForegroundColor Cyan
 
+# Start text UI in a second window
+$uiPath = Join-Path $PSScriptRoot 'backend\console_ui.py'
+$python = (Get-Command python -ErrorAction SilentlyContinue).Source
+if (-not $python) { $python = (Get-Command py -ErrorAction SilentlyContinue).Source }
+if ($python) {
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:Path = `'$env:Path`'; cd `'$PSScriptRoot`'; & `'$python`' `'$uiPath`'"
+}
+
 if ($protocol -eq 'https') {
     python -m uvicorn backend.app:asgi_app --host 0.0.0.0 --port $port --ssl-keyfile $keyFile --ssl-certfile $certFile --no-use-colors
 } else {

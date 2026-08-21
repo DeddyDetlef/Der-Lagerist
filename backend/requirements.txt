@@ -4,3 +4,5 @@ python-socketio
 qrcode[pil]
 aiosqlite
 python-multipart
+httpx
+rich
