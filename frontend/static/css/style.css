@@ -184,6 +184,12 @@ textarea {
   border-color: var(--primary);
 }
 
+.category-btn.active:hover {
+  background: var(--primary-hover);
+  color: #fff;
+  border-color: var(--primary-hover);
+}
+
 .rma-list {
   list-style: none;
   padding: 0;
