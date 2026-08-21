@@ -18,10 +18,6 @@ function showStatus(msg, type = 'info') {
 function updateSessionUI(data) {
   sessionToken = data.token;
   sessionUrl = data.url;
-  const protocol = data.protocol || 'http';
-  const hostUrl = `${protocol}://${data.host_ip}:${data.host_port}/host`;
-  $('host-url').textContent = hostUrl;
-  $('host-url').href = hostUrl;
   $('client-url').textContent = sessionUrl;
   $('session-token').textContent = sessionToken;
   $('session-qr').innerHTML = `<img src="/api/qr?data=${encodeURIComponent(sessionUrl)}" alt="Session QR">`;
