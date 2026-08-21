@@ -201,7 +201,7 @@ async function editItem(code) {
 
     renderRmas(item.rmas || []);
     await loadAudit(item.code);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    $('item-form').closest('section').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (e) {
     showStatus('Objekt konnte nicht geladen werden', 'error');
   }
