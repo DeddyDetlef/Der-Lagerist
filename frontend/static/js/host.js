@@ -167,7 +167,6 @@ async function editItem(code) {
     if (item.error) return;
     currentItem = item;
     $('edit-code').value = item.code;
-    $('item-code').value = item.code;
     $('item-name').value = item.name;
     $('item-category').value = item.category || 'sonstiges';
 
@@ -265,7 +264,6 @@ function resetForm() {
 
 async function saveItem(e) {
   e.preventDefault();
-  const code = $('item-code').value.trim();
   const editCode = $('edit-code').value;
   const category = $('item-category').value;
 
@@ -294,7 +292,6 @@ async function saveItem(e) {
         body: JSON.stringify(body),
       });
     } else {
-      body.code = code;
       res = await fetch('/api/items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
