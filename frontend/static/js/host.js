@@ -530,3 +530,4 @@ loadScans();
 checkCa();
 initDescTemplates();
 initCategoryButtons();
+resetForm();
