@@ -268,6 +268,9 @@ function showItem(item) {
   $('item-quantity').closest('.form-group').style.display = isLaptop ? 'none' : '';
   const unitLabel = $('item-unit').previousElementSibling;
   if (unitLabel) unitLabel.textContent = isLaptop ? 'Zustand' : 'Einheit';
+  if (isLaptop && !$('item-sina-token').value) {
+    $('item-sina-token').value = 'BBK-Prod1-';
+  }
 
   if (isLaptop) {
     $('item-desc').value = item.description || '';

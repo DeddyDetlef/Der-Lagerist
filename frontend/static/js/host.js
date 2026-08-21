@@ -102,10 +102,13 @@ function toggleCategoryFields(category) {
   $('laptop-fields').classList.toggle('hidden', !isLaptop);
   $('desc-templates').classList.toggle('hidden', !isLaptop);
   $('rma-details').classList.toggle('hidden', !isLaptop);
-  // For laptop: hide quantity, show unit as condition
+  // For laptop: hide quantity, show unit as condition, set Sina token prefix
   $('item-quantity').closest('.form-group').style.display = isLaptop ? 'none' : '';
   $('item-unit').previousElementSibling.textContent = isLaptop ? 'Zustand' : 'Einheit';
   setUnitOptions(isLaptop ? CONDITION_OPTIONS : UNIT_OPTIONS);
+  if (isLaptop && !$('item-sina-token').value) {
+    $('item-sina-token').value = 'BBK-Prod1-';
+  }
 }
 
 async function loadItems(search = '', append = false, skip = 0) {
@@ -258,6 +261,7 @@ function resetForm() {
   });
   toggleCategoryFields('sonstiges');
   $('rma-list').innerHTML = '';
+  $('item-sina-token').value = 'BBK-Prod1-';
   currentItem = null;
 }
 
