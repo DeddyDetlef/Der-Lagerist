@@ -1,5 +1,6 @@
-# Daten und Zertifikate
+# Daten, Backups und Zertifikate
 data/
+backups/
 certs/
 
 # Python

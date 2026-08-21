@@ -117,6 +117,7 @@ async function loadItems(search = '', append = false, skip = 0) {
 
 function renderItems(items) {
   const tbody = $('items-table').querySelector('tbody');
+  for (const item of items) {
     const tr = document.createElement('tr');
     const rmaCount = item.rmas ? item.rmas.length : 0;
     const rmaText = rmaCount > 0 ? `${rmaCount} RMA${rmaCount > 1 ? 's' : ''}` : '—';
